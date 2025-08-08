@@ -10,18 +10,15 @@ def create_plate():
     cols = [str(i) for i in range(1, 13)]
     return {row: [f"{row}{col}" for col in cols] for row in rows}
 
-
 def flatten_plate(plate):
     """Flatten the plate dict into a list by row."""
     return [well for row in plate.values() for well in row]
-
 
 def replace_well(plate, well_name, value):
     """Replace the value in a specific well of the plate."""
     row = well_name[0]
     col_idx = int(well_name[1:]) - 1
     plate[row][col_idx] = value
-
 
 def generate_sample_list(num_samples, num_replicates):
     """Generate a list of sample numbers with replicates."""
@@ -31,7 +28,6 @@ def generate_sample_list(num_samples, num_replicates):
     random.seed(1)
     random.shuffle(sample_list)
     return sample_list
-
 
 def get_psuedoY(x):
     """Convert x index to pseudo Y value for 96-well plate."""
@@ -48,7 +44,6 @@ def get_line_by_y(y):
     y_to_row = {0: 'A', 1: 'B', 2: 'C', 3: 'D', 4: 'E', 5: 'F', 6: 'G', 7: 'H'}
     return y_to_row.get(y, None)
 
-
 def fill_plate(samples, plate, exclude_rows=None):
     """
     Fill the plate with sample numbers based on sample list.
@@ -56,7 +51,6 @@ def fill_plate(samples, plate, exclude_rows=None):
     """
     exclude_rows = exclude_rows or []
     sample_iter = iter(samples)
-    max_dim = max(12, 8)  # Assuming 12 columns and 8 rows for 96-well
 
     x = y = 0
     while y <= 7:
@@ -84,7 +78,6 @@ def fill_plate(samples, plate, exclude_rows=None):
                 x = -x
             else:
                 x = -x + 1
-
 
 def remainder_spiral(samples, plate):
     """
@@ -157,8 +150,8 @@ def plate_output(plate):
     ax.xaxis.set_label_position('top'); ax.xaxis.tick_top()
     ax.set_xticks(np.arange(-0.5,12,1), minor=True); ax.set_yticks(np.arange(-0.5,8,1), minor=True)
     ax.grid(which='minor', color='black', linewidth=1); ax.grid(which='major', visible=False)
-    for i in range(8):
-        for j in range(12):
+    for i in range(df_plate.shape[0]):
+        for j in range(df_plate.shape[1]):
             val = df_plate.apply(pd.to_numeric, errors='coerce').fillna(0).astype(int).iat[i,j]
             if val != 0:
                 ax.text(j, i, str(val), ha='center', va='center')
