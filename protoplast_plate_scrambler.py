@@ -81,33 +81,44 @@ def fill_plate(samples, plate, exclude_rows=None):
 
 def remainder_spiral(samples, plate):
     """
-    Fill the plate in a spiral pattern with remaining samples.
-    This is used when the sample number is not a multiple of 8.
+    Fill the plate in a spiral pattern dynamically based on the plate size.
     """
-    sample_iter = iter(samples)
-    dx, dy = 0, -1
-    x = y = 0
-    max_x, max_y = 6, 8  # half of plate dimensions approx
 
-    for _ in range(max_x * max_y * 4):  # enough iterations to cover all wells
-        if (-max_x / 2 < x <= max_x / 2) and (-max_y / 2 < y <= max_y / 2):
+    sample_iter = iter(samples)
+
+    rows = list(plate.keys())          # e.g. ['A','B','C','D','E','F','G','H']
+    cols = list(range(1, len(plate[rows[0]]) + 1))  # e.g. [1..12]
+
+    max_y = len(rows)      # number of rows, e.g. 8
+    max_x = len(cols)      # number of columns, e.g. 12
+
+    # Spiral bounds: from 0 to max_x -1, 0 to max_y -1
+    visited = set()
+    x = y = 0
+    dx, dy = 1, 0  # start moving right
+
+    for _ in range(max_x * max_y):
+        if 0 <= x < max_x and 0 <= y < max_y and (x, y) not in visited:
             try:
                 value = next(sample_iter)
             except StopIteration:
                 value = 0
 
-            psuedoY = get_psuedoY(x)
-            # Reverse the y index to plate row letter, note original code had different y mapping here
-            y_idx = y + 3  # Adjust as needed to match original indexing
-            psuedoX = get_line_by_y(y_idx)
-            if psuedoY and psuedoX:
-                well_name = f"{psuedoX}{psuedoY}"
-                replace_well(plate, well_name, value)
+            row_letter = rows[y]
+            col_number = cols[x]
+            well_name = f"{row_letter}{col_number}"
+            replace_well(plate, well_name, value)
+            visited.add((x, y))
 
-        # Spiral movement logic
-        if (x == y) or (x < 0 and x == -y) or (x > 0 and x == 1 - y):
-            dx, dy = -dy, dx
-        x, y = x + dx, y + dy
+        # Calculate next position
+        nx, ny = x + dx, y + dy
+
+        # Change direction if next pos out of bounds or already visited
+        if nx < 0 or nx >= max_x or ny < 0 or ny >= max_y or (nx, ny) in visited:
+            dx, dy = -dy, dx  # turn right: (dx,dy) = (-dy, dx)
+            nx, ny = x + dx, y + dy
+
+        x, y = nx, ny
 
 def descrambler(inputFile, plate):
     """Descramble a plate of samples from a CSV or Excel file."""
@@ -171,7 +182,7 @@ def main():
     sample_number = args.Samples
     replicate_number = args.Replicates 
     descramble = args.descramble
-    plate = create_plate()
+    plate = create_plate() 
     sample_list = generate_sample_list(sample_number, replicate_number)
 
     exclusion_map = {
@@ -181,9 +192,17 @@ def main():
         5: [0, 1, 7],
         4: [0, 1, 6, 7],
     }
+    total = sample_number * replicate_number
+    exclusion_map_param = None
+    max_limits = {4: 48, 5: 60, 6: 72, 7: 84, 8: 96}
 
-    if sample_number in exclusion_map:
-        fill_plate(sample_list, plate, exclude_rows=exclusion_map[sample_number])
+    for n in [4, 5, 6, 7, 8]:
+        if total % n == 0 and total <= max_limits[n]:
+            exclusion_map_param = n
+            break
+
+    if exclusion_map_param is not None:
+        fill_plate(sample_list, plate, exclude_rows=exclusion_map[exclusion_map_param])
     else:
         remainder_spiral(sample_list, plate)
 
